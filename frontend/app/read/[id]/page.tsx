@@ -152,6 +152,26 @@ export default function ReadingStudio() {
             {processing && "BoloBuddy is checking your reading…"}
           </p>
           <Waveform levels={rec.levels} active={rec.state === "recording"} />
+          {rec.state === "recording" && (
+            <p className={`text-sm font-bold ${rec.peak < 0.08 ? "text-rose-700" : "text-teal-700"}`} aria-live="polite">
+              {rec.peak < 0.08 ? "No sound is reaching this microphone. Try another one below." : "Mic is picking you up."}
+            </p>
+          )}
+          {(rec.devices.length > 0 || rec.state !== "idle") && (
+            <label className="mx-auto mt-2 flex max-w-sm items-center gap-2 text-sm font-semibold text-indigo-900/70">
+              Microphone
+              <select
+                className="flex-1 rounded-xl border-2 border-indigo-100 bg-white px-2 py-1"
+                value={rec.deviceId}
+                onFocus={rec.refreshDevices}
+                onChange={(e) => { rec.setDeviceId(e.target.value); if (rec.state === "stopped") rec.reset(); }}
+                disabled={rec.state === "recording" || rec.state === "paused"}
+              >
+                <option value="">System default</option>
+                {rec.devices.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+              </select>
+            </label>
+          )}
           <div className="my-2 font-mono text-2xl font-bold tabular-nums" aria-live="off">
             {rec.elapsed.toFixed(1)}s <span className="text-sm text-indigo-900/50">/ {MAX_SECONDS}s max</span>
           </div>

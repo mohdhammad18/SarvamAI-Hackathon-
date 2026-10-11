@@ -21,6 +21,17 @@ export function useRecorder() {
   const [error, setError] = useState<string | null>(null);
   const [levels, setLevels] = useState<number[]>(Array(24).fill(0));
   const [silent, setSilent] = useState(false);
+  const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
+  const [deviceId, setDeviceIdState] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("bolobuddy.mic") ?? "" : ""));
+  const [peak, setPeak] = useState(0);
+  const setDeviceId = (id: string) => { setDeviceIdState(id); localStorage.setItem("bolobuddy.mic", id); };
+
+  const refreshDevices = useCallback(async () => {
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setDevices(list.filter((d) => d.kind === "audioinput").map((d, i) => ({ id: d.deviceId, label: d.label || `Microphone ${i + 1}` })));
+    } catch { /* ignore */ }
+  }, []);
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -60,8 +71,10 @@ export function useRecorder() {
     setState("requesting");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+        audio: { ...(deviceId ? { deviceId: { exact: deviceId } } : {}), echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       });
+      refreshDevices();
+      setPeak(0);
       streamRef.current = stream;
       const mime = pickMime();
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
@@ -92,6 +105,8 @@ export function useRecorder() {
       const tick = () => {
         analyser.getByteFrequencyData(buf);
         setLevels(Array.from(buf.slice(0, 24), (v) => v / 255));
+        const mx = Math.max(...buf) / 255;
+        setPeak((p) => Math.max(p * 0.95, mx));
         raf.current = requestAnimationFrame(tick);
       };
       tick();
@@ -115,7 +130,7 @@ export function useRecorder() {
           : "We couldn't start the microphone. Please try again.",
       );
     }
-  }, [cleanup, stop]);
+  }, [cleanup, stop, deviceId, refreshDevices]);
 
   const pause = useCallback(() => {
     const rec = recRef.current;
@@ -145,5 +160,5 @@ export function useRecorder() {
     setError(null);
   }, [cleanup]);
 
-  return { state, elapsed, blob, error, levels, silent, start, stop, pause, resume, reset };
+  return { state, elapsed, blob, error, levels, silent, peak, devices, deviceId, setDeviceId, refreshDevices, start, stop, pause, resume, reset };
 }
