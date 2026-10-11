@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toWav16k } from "./wav";
+
+const SILENCE_RMS = 0.004;
 
 export type RecState = "idle" | "requesting" | "recording" | "paused" | "stopped" | "error";
 
@@ -17,6 +20,7 @@ export function useRecorder() {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [levels, setLevels] = useState<number[]>(Array(24).fill(0));
+  const [silent, setSilent] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -45,6 +49,7 @@ export function useRecorder() {
   const start = useCallback(async () => {
     setError(null);
     setBlob(null);
+    setSilent(false);
     setElapsed(0);
     accumulated.current = 0;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
@@ -54,7 +59,9 @@ export function useRecorder() {
     }
     setState("requesting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, channelCount: 1 } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+      });
       streamRef.current = stream;
       const mime = pickMime();
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
@@ -65,9 +72,16 @@ export function useRecorder() {
         accumulated.current += rec.state === "inactive" && startedAt.current ? (performance.now() - startedAt.current) / 1000 : 0;
         startedAt.current = 0;
         setElapsed(Math.round(accumulated.current * 10) / 10);
-        setBlob(new Blob(chunks.current, { type: (rec.mimeType || "audio/webm").split(";")[0] }));
-        setState("stopped");
         cleanup();
+        const raw = new Blob(chunks.current, { type: (rec.mimeType || "audio/webm").split(";")[0] });
+        toWav16k(raw)
+          .then(({ wav, duration, rms }) => {
+            setBlob(wav);
+            setElapsed(Math.round(duration * 10) / 10);
+            setSilent(rms < SILENCE_RMS);
+          })
+          .catch(() => setBlob(raw))
+          .finally(() => setState("stopped"));
       };
       const ac = new AudioContext();
       acRef.current = ac;
@@ -125,10 +139,11 @@ export function useRecorder() {
   const reset = useCallback(() => {
     cleanup();
     setBlob(null);
+    setSilent(false);
     setElapsed(0);
     setState("idle");
     setError(null);
   }, [cleanup]);
 
-  return { state, elapsed, blob, error, levels, start, stop, pause, resume, reset };
+  return { state, elapsed, blob, error, levels, silent, start, stop, pause, resume, reset };
 }

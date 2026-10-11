@@ -64,6 +64,11 @@ function SpokenAttempt({ item, learnerId, onDone, target }: Props & { target: st
 
   useEffect(() => {
     if (rec.state !== "stopped" || !rec.blob) return;
+    if (rec.silent) {
+      setErr("I couldn't hear anything. Check your microphone is on and not muted, then try again.");
+      rec.reset();
+      return;
+    }
     (async () => {
       setBusy(true);
       tutor.setState("thinking");
@@ -72,7 +77,7 @@ function SpokenAttempt({ item, learnerId, onDone, target }: Props & { target: st
       fd.append("learner_id", learnerId);
       fd.append("item_id", item.id);
       fd.append("duration_seconds", String(Math.max(rec.elapsed, 1)));
-      fd.append("file", rec.blob!, "attempt.webm");
+      fd.append("file", rec.blob!, rec.blob!.type.includes("wav") ? "attempt.wav" : "attempt.webm");
       try {
         const res = await fetch(`${API_URL}/api/v1/practice/spoken`, { method: "POST", body: fd });
         const body = await res.json();

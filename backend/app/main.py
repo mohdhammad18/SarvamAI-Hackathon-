@@ -362,6 +362,7 @@ async def assess_reading(
             raise stt_error(exc)
     else:
         tr = sarvam_stt.mock_transcribe(passage_id)
+    log.info("STT %s: %s, %d bytes, %.1fs -> %d chars", tr.source, mime, len(audio), duration_seconds, len(tr.transcript))
     del audio  # raw audio is processed in memory and never stored
 
     # Prefer the speech span from STT timestamps over the client timer.

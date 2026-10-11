@@ -66,7 +66,7 @@ export default function ReadingStudio() {
     fd.append("learner_id", learner.id);
     fd.append("passage_id", passage.id);
     fd.append("duration_seconds", String(rec.elapsed));
-    fd.append("file", rec.blob, `reading.${rec.blob.type.includes("ogg") ? "ogg" : rec.blob.type.includes("mp4") ? "m4a" : "webm"}`);
+    fd.append("file", rec.blob, `reading.${rec.blob.type.includes("wav") ? "wav" : rec.blob.type.includes("ogg") ? "ogg" : rec.blob.type.includes("mp4") ? "m4a" : "webm"}`);
     try {
       const res = await fetch(`${API_URL}/api/v1/sessions/assess`, { method: "POST", body: fd });
       const body = await res.json();
@@ -187,6 +187,11 @@ export default function ReadingStudio() {
             )}
           </div>
           {rec.state === "stopped" && rec.elapsed < 1 && <p className="mt-2 text-rose-700">That was too short. Please record again.</p>}
+          {rec.state === "stopped" && rec.silent && (
+            <p role="alert" className="mt-2 font-semibold text-amber-800">
+              Your recording is almost silent. Check that the right microphone is selected and not muted, then record again closer to it.
+            </p>
+          )}
           {rec.error && <div className="mt-3"><ErrorBox onRetry={retry}>{rec.error}</ErrorBox></div>}
           {error && <div className="mt-3"><ErrorBox onRetry={() => submit()}>{error}</ErrorBox></div>}
         </Card>
