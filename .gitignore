@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+node_modules/
+.venv/
+dist/
+build/
+.next/
+*.log
+*.db
+backend/cache/
+.pytest_cache/
+.cursor/
