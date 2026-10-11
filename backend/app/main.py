@@ -369,7 +369,7 @@ async def assess_reading(
     result = assess(p["text"], tr.transcript, duration, p["language"]).to_dict()
     result["phoneme_evidence"] = phoneme_assessor.assess(p["text"], b"", p["language"], None).__dict__
     feedback = (await sarvam_chat.tutor_feedback(result, p, learner)).model_dump()
-    if settings.live and learner["tutor_language"] != "en-IN" and feedback["source"] == "template":
+    if settings.live and learner["tutor_language"] != "en-IN":
         try:
             feedback["translated_message"] = await sarvam_translation.translate(
                 f"{feedback['message']} {feedback['tip']}", "en-IN", learner["tutor_language"])
