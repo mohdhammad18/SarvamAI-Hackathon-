@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toWav16k } from "./wav";
 
-const SILENCE_RMS = 0.004;
+const SILENCE_RMS = 0.0015;
 
 export type RecState = "idle" | "requesting" | "recording" | "paused" | "stopped" | "error";
 
@@ -21,6 +21,7 @@ export function useRecorder() {
   const [error, setError] = useState<string | null>(null);
   const [levels, setLevels] = useState<number[]>(Array(24).fill(0));
   const [silent, setSilent] = useState(false);
+  const [rms, setRms] = useState(0);
   const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
   const [deviceId, setDeviceIdState] = useState<string>(() => (typeof window !== "undefined" ? localStorage.getItem("bolobuddy.mic") ?? "" : ""));
   const [peak, setPeak] = useState(0);
@@ -92,6 +93,7 @@ export function useRecorder() {
             setBlob(wav);
             setElapsed(Math.round(duration * 10) / 10);
             setSilent(rms < SILENCE_RMS);
+            setRms(rms);
           })
           .catch(() => setBlob(raw))
           .finally(() => setState("stopped"));
@@ -160,5 +162,5 @@ export function useRecorder() {
     setError(null);
   }, [cleanup]);
 
-  return { state, elapsed, blob, error, levels, silent, peak, devices, deviceId, setDeviceId, refreshDevices, start, stop, pause, resume, reset };
+  return { state, elapsed, blob, error, levels, silent, rms, peak, devices, deviceId, setDeviceId, refreshDevices, start, stop, pause, resume, reset };
 }

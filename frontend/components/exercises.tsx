@@ -64,11 +64,6 @@ function SpokenAttempt({ item, learnerId, onDone, target }: Props & { target: st
 
   useEffect(() => {
     if (rec.state !== "stopped" || !rec.blob) return;
-    if (rec.silent) {
-      setErr("I couldn't hear anything. Check your microphone is on and not muted, then try again.");
-      rec.reset();
-      return;
-    }
     (async () => {
       setBusy(true);
       tutor.setState("thinking");
@@ -84,7 +79,7 @@ function SpokenAttempt({ item, learnerId, onDone, target }: Props & { target: st
         if (!res.ok) throw new ApiError(body.error?.code, body.error?.message, res.status);
         if (body.uncertain) {
           tutor.setState("encouraging");
-          setErr("I couldn't hear that clearly. Let's try once more, a little louder.");
+          setErr(`I couldn't hear that clearly (mic level ${(rec.rms * 1000).toFixed(1)}). Let's try once more, a little louder.`);
           rec.reset();
         } else {
           tutor.setState(body.correct ? "celebrating" : "encouraging");

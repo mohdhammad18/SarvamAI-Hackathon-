@@ -209,7 +209,7 @@ export default function ReadingStudio() {
           {rec.state === "stopped" && rec.elapsed < 1 && <p className="mt-2 text-rose-700">That was too short. Please record again.</p>}
           {rec.state === "stopped" && rec.silent && (
             <p role="alert" className="mt-2 font-semibold text-amber-800">
-              Your recording is almost silent. Check that the right microphone is selected and not muted, then record again closer to it.
+              Your recording sounds very quiet (level {(rec.rms * 1000).toFixed(1)}). You can still send it, or pick another microphone below and record again.
             </p>
           )}
           {rec.error && <div className="mt-3"><ErrorBox onRetry={retry}>{rec.error}</ErrorBox></div>}
